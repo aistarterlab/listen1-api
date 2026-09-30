@@ -3,7 +3,7 @@
 // eslint-disable-next-line no-unused-vars
 const webpack = require('webpack');
 const path = require('path');
-const { env } = require('yargs').argv; // use --env with webpack 2
+const { env } = require('yargs').argv;
 const pkg = require('./package.json');
 
 const libraryName = pkg.name;
@@ -22,13 +22,9 @@ if (env === 'build') {
 const config = {
   mode,
   entry: `${__dirname}/src/index.js`,
-  // open devtool only when debug
-  // it will increase lib size
-  // devtool: 'inline-source-map',
   output: {
     path: `${__dirname}/dist`,
     filename: outputFile,
-    // library: libraryName,
     library: 'listen1Api',
     libraryTarget: 'umd',
     umdNamedDefine: true,
@@ -36,15 +32,28 @@ const config = {
   },
   module: {
     rules: [
+      // 1. 转译你自己的源码
       {
         test: /(\.jsx|\.js)$/,
         loader: 'babel-loader',
         exclude: /(node_modules|bower_components)/,
       },
+      // 2. 新增：强制转译 cheerio，解决 export * as 语法报错
+      {
+        test: /\.m?js$/,
+        include: /node_modules[\\/]cheerio/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env'],
+          },
+        },
+      },
+      // 3. 修正 eslint-loader（原来 exclude 写反了）
       {
         test: /(\.jsx|\.js)$/,
         loader: 'eslint-loader',
-        exclude: /node_modules|src/,
+        include: /src/,
       },
     ],
   },
@@ -58,7 +67,6 @@ const config = {
     tls: 'empty',
   },
   externals: {
-    // request not working with browser, so we exclude it from bundle
     request: 'request',
     electron: 'electron',
   },
